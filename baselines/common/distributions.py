@@ -3,7 +3,8 @@ import numpy as np
 import baselines.common.tf_util as U
 from baselines.a2c.utils import fc
 from tensorflow.python.ops import math_ops
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 class Pd(object):
     """
     A particular probability distribution

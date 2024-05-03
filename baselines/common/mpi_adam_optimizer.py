@@ -2,11 +2,16 @@ import numpy as np
 import tensorflow as tf
 from baselines.common import tf_util as U
 from baselines.common.tests.test_with_mpi import with_mpi
+from tensorflow.keras.optimizers import Adam
 from baselines import logger
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
+
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 
 class MpiAdamOptimizer(tf.train.AdamOptimizer):
     """Adam optimizer that averages gradients across mpi processes."""

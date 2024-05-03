@@ -10,7 +10,8 @@ try:
     from baselines.common.mpi_util import sync_from_root
 except ImportError:
     MPI = None
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 class Model(object):
     """
     We use this object to :

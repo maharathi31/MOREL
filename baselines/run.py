@@ -6,13 +6,22 @@ import gym
 from collections import defaultdict
 import tensorflow as tf
 import numpy as np
-
+from gym.wrappers import Monitor
 from baselines.common.vec_env import VecFrameStack, VecNormalize, VecEnv
 from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env, make_env
 from baselines.common.tf_util import get_session
 from baselines import logger
 from importlib import import_module
+import os
+import cv2
+import base64
+from IPython.display import HTML
+
+from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
+
+
+
 
 try:
     from mpi4py import MPI
@@ -117,7 +126,6 @@ def build_env(args):
 
     return env
 
-
 def get_env_type(args):
     env_id = args.env
 
@@ -199,9 +207,67 @@ def configure_logger(log_path, **kwargs):
         logger.configure(**kwargs)
 
 
-def main(args):
-    # configure logger, disable logging in child MPI processes (with rank > 0)
+# def main(args):
+#     # configure logger, disable logging in child MPI processes (with rank > 0)
 
+#     arg_parser = common_arg_parser()
+#     args, unknown_args = arg_parser.parse_known_args(args)
+#     extra_args = parse_cmdline_kwargs(unknown_args)
+
+#     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
+#         rank = 0
+#         configure_logger(args.log_path)
+#     else:
+#         rank = MPI.COMM_WORLD.Get_rank()
+#         configure_logger(args.log_path, format_strs=[])
+
+#     model, env = train(args, extra_args)
+
+#     if args.save_path is not None and rank == 0:
+#         save_path = osp.expanduser(args.save_path)
+#         model.save(save_path)
+
+#     if args.play:
+#         logger.log("Running trained model")
+#         obs = env.reset()
+
+#         state = model.initial_state if hasattr(model, 'initial_state') else None
+#         dones = np.zeros((1,))
+
+#         episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
+#         while True:
+#             if state is not None:
+#                 actions, _, state, _ = model.step(obs,S=state, M=dones)
+#             else:
+#                 actions, _, _, _ = model.step(obs)
+
+#             obs, rew, done, _ = env.step(actions)
+#             episode_rew += rew
+#             env.render()
+#             done_any = done.any() if isinstance(done, np.ndarray) else done
+#             if done_any:
+#                 for i in np.nonzero(done)[0]:
+#                     print('episode_rew={}'.format(episode_rew[i]))
+#                     episode_rew[i] = 0
+
+#     env.close()
+
+#     return model
+
+def show_videos(video_path='./videos'):
+    html = ''
+    for mp4 in glob.glob(os.path.join(video_path, '*.mp4')):
+        video_file = open(mp4, "rb").read()
+        video_encoded = base64.b64encode(video_file).decode("ascii")
+        video_html = f'''
+        <video width=400 controls>
+            <source src="data:video/mp4;base64,{video_encoded}" type="video/mp4">
+        </video>
+        '''
+        html += video_html
+    return HTML(html)
+
+def main(args):
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args(args)
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -225,26 +291,38 @@ def main(args):
 
         state = model.initial_state if hasattr(model, 'initial_state') else None
         dones = np.zeros((1,))
-
         episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
+
+        # Set up OpenCV VideoWriter
+        video_path = './videos/output.avi'
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        width, height = env.observation_space.shape[:2]
+        video_writer = cv2.VideoWriter(video_path, fourcc, 30.0, (width, height))
+
         while True:
             if state is not None:
-                actions, _, state, _ = model.step(obs,S=state, M=dones)
+                actions, _, state, _ = model.step(obs, S=state, M=dones)
             else:
                 actions, _, _, _ = model.step(obs)
 
             obs, rew, done, _ = env.step(actions)
             episode_rew += rew
-            env.render()
+
+            # Write frames to the video file
+            frame = env.render(mode='rgb_array')
+            video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
             done_any = done.any() if isinstance(done, np.ndarray) else done
             if done_any:
                 for i in np.nonzero(done)[0]:
                     print('episode_rew={}'.format(episode_rew[i]))
                     episode_rew[i] = 0
 
-    env.close()
+        video_writer.release()
 
+    env.close()
     return model
+
 
 if __name__ == '__main__':
     main(sys.argv)

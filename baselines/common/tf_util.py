@@ -5,7 +5,8 @@ import os
 import functools
 import collections
 import multiprocessing
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 def switch(condition, then_expression, else_expression):
     """Switches between two operations depending on a scalar value (int or bool).
     Note that both `then_expression` and `else_expression`

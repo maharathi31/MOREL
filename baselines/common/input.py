@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
 from gym.spaces import Discrete, Box, MultiDiscrete
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 def observation_placeholder(ob_space, batch_size=None, name='Ob'):
     '''
     Create placeholder to feed observations into of the size appropriate to the observation space

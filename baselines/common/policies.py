@@ -8,7 +8,8 @@ from baselines.common.mpi_running_mean_std import RunningMeanStd
 from baselines.common.models import get_network_builder
 
 import gym
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class PolicyWithValue(object):
     """
